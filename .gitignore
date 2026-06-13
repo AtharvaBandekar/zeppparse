@@ -1,0 +1,11 @@
+data/raw/
+data/processed/
+*.csv
+*.fit
+*.tcx
+*.json
+output/sample/
+__pycache__/
+*.pyc
+.DS_Store
+.env
