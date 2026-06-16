@@ -23,6 +23,8 @@ PROCESSED_DIR = Path("data/processed")
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 HR_FILE = RAW_DIR / "HEARTRATE_AUTO" / "HEARTRATE_AUTO_1780695191057.csv"
 SLEEP_FILE = RAW_DIR / "SLEEP" / "SLEEP_1780695190291.csv"
+ACTIVITY_MINUTE_FILE = RAW_DIR / "ACTIVITY_MINUTE" / "ACTIVITY_MINUTE_1780695190225.csv"
+ACTIVITY_STAGE_FILE = RAW_DIR / "ACTIVITY_STAGE" / "ACTIVITY_STAGE_1780695190155.csv"
 
 # HR Parser
 def parse_hr(filepath: Path) -> pd.DataFrame:
@@ -92,6 +94,58 @@ def parse_sleep(filepath: Path) -> pd.DataFrame:
 
     return df.sort_values("local_date").reset_index(drop=True)
 
+# Activity Minute Parser
+def parse_activity_minute(filepath: Path) -> pd.DataFrame:
+    """Parse ACTIVITY_MINUTE CSV into standardized format."""
+    df = pd.read_csv(filepath)
+
+    # Combine date and time into local timestamp
+    df["local_timestamp"] = pd.to_datetime(df["date"] + " " + df["time"])
+
+    # Assign timezone and local date
+    df["timezone"] = df["date"].apply(lambda d: str(get_timezone(d)))
+    df["local_date"] = df["local_timestamp"].dt.date
+
+    df = df.drop(columns=["date", "time"])
+    df = df[["local_timestamp", "local_date", "timezone", "steps"]]
+
+    # Deduplicate
+    df = df.drop_duplicates(subset=["local_timestamp"])
+
+    return df.sort_values("local_timestamp").reset_index(drop=True)
+
+# Activity Stage Parser
+def parse_activity_stage(filepath: Path) -> pd.DataFrame:
+    """Parse ACTIVITY_STAGE CSV into standardized format."""
+    df = pd.read_csv(filepath)
+
+    # Combine date and start time into local timestamp
+    df["start_local"] = pd.to_datetime(df["date"] + " " + df["start"])
+    df["stop_local"] = pd.to_datetime(df["date"] + " " + df["stop"])
+
+    # Assign timezone and local date
+    df["timezone"] = df["date"].apply(lambda d: str(get_timezone(d)))
+    df["local_date"] = pd.to_datetime(df["date"]).dt.date
+
+    df = df.drop(columns=["date", "start", "stop"])
+    df = df[["local_date", "timezone", "start_local", "stop_local",
+             "distance", "calories", "steps"]]
+
+    return df.sort_values("start_local").reset_index(drop=True)
+
+# Write to Parquet
+def save_all(hr, sleep, activity_min, activity_stage):
+    """Write all parsed dataframes to processed directory."""
+    hr.to_parquet(PROCESSED_DIR / "hr.parquet", index=False)
+    sleep.to_parquet(PROCESSED_DIR / "sleep.parquet", index=False)
+    activity_min.to_parquet(PROCESSED_DIR / "activity_minute.parquet", index=False)
+    activity_stage.to_parquet(PROCESSED_DIR / "activity_stage.parquet", index=False)
+    print("\n── Saved to data/processed/ ─────────")
+    print(f"  hr.parquet              {hr.shape[0]} rows")
+    print(f"  sleep.parquet           {sleep.shape[0]} rows")
+    print(f"  activity_minute.parquet {activity_min.shape[0]} rows")
+    print(f"  activity_stage.parquet  {activity_stage.shape[0]} rows")
+
 # Execution Block
 if __name__ == "__main__":
     hr = parse_hr(HR_FILE)
@@ -107,3 +161,20 @@ if __name__ == "__main__":
     print(f"Shape: {sleep.shape}")
     print(f"Date range: {sleep['local_date'].min()} → {sleep['local_date'].max()}")
     print(f"Missing total sleep: {sleep['total_sleep_min'].isna().sum()}")
+
+    print("\n── Activity Minute ──────────────────")
+    activity_min = parse_activity_minute(ACTIVITY_MINUTE_FILE)
+    print(activity_min.head(5))
+    print(f"Shape: {activity_min.shape}")
+    print(f"Date range: {activity_min['local_date'].min()} → {activity_min['local_date'].max()}")
+    print(f"Missing steps: {activity_min['steps'].isna().sum()}")
+
+    print("\n── Activity Stage ───────────────────")
+    activity_stage = parse_activity_stage(ACTIVITY_STAGE_FILE)
+    print(activity_stage.head(5))
+    print(f"Shape: {activity_stage.shape}")
+    print(f"Date range: {activity_stage['local_date'].min()} → {activity_stage['local_date'].max()}")
+    print(f"Missing calories: {activity_stage['calories'].isna().sum()}")
+
+    save_all(hr, sleep, activity_min, activity_stage)
+
