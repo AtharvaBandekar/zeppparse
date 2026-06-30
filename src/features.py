@@ -147,6 +147,8 @@ if __name__ == "__main__":
     sleep_features = compute_sleep_features(sleep)
     daily_steps = compute_daily_steps(activity_min)
     summary = compute_daily_summary(resting_hr, sleep_features, daily_steps)
+    summary.to_parquet(PROCESSED_DIR / "daily_summary.parquet", index=False)
+    print(f"\nSaved daily_summary.parquet ({summary.shape[0]} rows)")
 
     print("── Daily Summary ────────────────────")
     print(summary.head(10))
