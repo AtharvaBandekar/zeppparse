@@ -138,26 +138,32 @@ if __name__ == "__main__":
             {"strain_state": r["strain_state"]}
         ), axis=1
     )
+    
+    # Save classifier output
+    output_cols = [
+        "local_date", "resting_hr", "resting_hr_7d_mean",
+        "total_sleep_min", "total_sleep_7d_mean",
+        "daily_steps", "daily_steps_7d_mean",
+        "recovery_state", "strain_state", "readiness_score", "unreliable"
+    ]
+    output = summary[output_cols]
+    output.to_parquet(PROCESSED_DIR / "baseline_output.parquet", index=False)
+    print(f"Saved baseline_output.parquet ({output.shape[0]} rows)")
 
-    # Print results
-    print("\n── Baseline Classifier Output ───────")
-    print(summary[["local_date", "resting_hr", "total_sleep_min",
-                   "daily_steps", "recovery_state",
-                   "strain_state", "readiness_score"]].tail(14).to_string())
+    # Today's readiness — the actual user-facing output
+    today = output[output["readiness_score"] > 0].iloc[-1]
+    from datetime import date
+    latest_date = today['local_date'].date()
+    days_stale = (date.today() - latest_date).days
 
-    print("\n── Summary Statistics ───────────────")
-    print(f"Days classified:     {len(summary)}")
-    print(f"Unreliable days:     {(summary['recovery_state'] == 'unreliable').sum()}")
-    print(f"Poor recovery days:  {(summary['recovery_state'] == 'poor').sum()}")
-    print(f"Reduced recovery:    {(summary['recovery_state'] == 'reduced').sum()}")
-    print(f"Normal recovery:     {(summary['recovery_state'] == 'normal').sum()}")
-    print(f"\nMean readiness score: {summary[summary['readiness_score'] > 0]['readiness_score'].mean():.1f}")
-    print(f"Min readiness score:  {summary[summary['readiness_score'] > 0]['readiness_score'].min()}")
-    print(f"Max readiness score:  {summary[summary['readiness_score'] > 0]['readiness_score'].max()}")
-    print(summary[["local_date", "resting_hr", "resting_hr_7d_mean", 
-               "resting_hr_7d_std", "recovery_state", 
-               "readiness_score"]].tail(14).to_string())
-    print(summary[["local_date", "resting_hr", "resting_hr_7d_mean", 
-               "resting_hr_28d_std", "recovery_state", 
-               "readiness_score"]].tail(14).to_string())
+    print("\n── Latest Readiness ─────────────────")
+    if days_stale > 2:
+        print(f"  ⚠ Data is {days_stale} days old — re-export from Zepp before trusting this score")
+    print(f"  Date:            {latest_date}")
+    print(f"  Resting HR:      {today['resting_hr']:.0f} bpm (7d mean: {today['resting_hr_7d_mean']:.1f})")
+    print(f"  Sleep:           {today['total_sleep_min']:.0f} min (7d mean: {today['total_sleep_7d_mean']:.1f})")
+    print(f"  Steps yesterday: {today['daily_steps']:.0f} (7d mean: {today['daily_steps_7d_mean']:.1f})")
+    print(f"  Recovery state:  {today['recovery_state'].upper()}")
+    print(f"  Strain state:    {today['strain_state'].upper()}")
+    print(f"  Readiness score: {today['readiness_score']}/10")
 
