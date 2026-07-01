@@ -47,3 +47,13 @@ See `output/sample/daily_summary_sample.csv` for an anonymized 14-day sample of 
 - Sleep efficiency is computed from Zepp's reported sleep onset/wake timestamps, not true time-in-bed - values run higher than clinical sleep efficiency norms and should be interpreted as relative to your own baseline, not compared to population benchmarks
 - Body fat and body circumference exports are intentionally excluded - wrist-worn bioimpedance estimates are not reliable enough to build deterministic logic on
 - Timezone handling requires manually maintaining the `TIMEZONE_PERIODS` map; it does not auto-detect travel from the data
+
+## Updating your data
+
+1. Open Zepp → Profile → My Data → Export each stream
+2. Replace files in data/raw/<STREAM>/
+3. For new workouts, export TCX individually → data/raw/workouts/
+4. Run:
+   python src/ingest.py
+   python src/features.py
+   python src/baseline.py
