@@ -81,12 +81,19 @@ def compute_sleep_features(sleep: pd.DataFrame) -> pd.DataFrame:
     df["sleep_efficiency_7d_mean"] = (
         df["sleep_efficiency"].rolling(7, min_periods=3).mean()
     )
+    df["total_sleep_7d_std"] = (
+        df["total_sleep_min"].rolling(7, min_periods=3).std()
+    )
+    df["sleep_efficiency_7d_std"] = (
+        df["sleep_efficiency"].rolling(7, min_periods=3).std()
+    )
 
     return df[[
         "local_date", "timezone",
         "total_sleep_min", "time_in_bed_min", "sleep_efficiency",
         "deep_sleep_min", "rem_sleep_min", "wake_min",
-        "total_sleep_7d_mean", "sleep_efficiency_7d_mean"
+        "total_sleep_7d_mean", "total_sleep_7d_std",
+        "sleep_efficiency_7d_mean", "sleep_efficiency_7d_std"
     ]].reset_index(drop=True)
 
 # Daily Steps
