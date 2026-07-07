@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 from datetime import date
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent))
 
 # Paths
 PROCESSED_DIR = Path("data/processed")
